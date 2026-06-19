@@ -3,3 +3,5 @@
 carwash.db
 
 __pycache__/main.cpython-313.pyc
+
+bookings_export.csv
