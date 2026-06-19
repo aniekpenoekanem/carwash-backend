@@ -1,0 +1,5 @@
+Customer,Phone,Service,Amount,Brand,Model,Booking Time,Status,Created At
+Benjamin Ekanem,08023264227,Full Service,4500.0,Toyota,Highlander,2026-06-18T17:00:00.000,service_pending,2026-06-15 16:49:38.839999
+Aniekpeno,08060637294,Premium Wash,2000.0,Toyota,Corolla,2026-06-18T22:15:00.000,service_pending,2026-06-15 21:57:09.590949
+Affiong Ekanem,080677831455,Full Service,3500.0,Honda,Accord,2026-06-19T05:00:00.000,service_pending,2026-06-16 00:59:16.567590
+Splash,07010319790,Full Service,3500.0,Mercedes,C300,2026-06-18T01:00:00.000,service_pending,2026-06-16 01:00:04.531743
