@@ -99,12 +99,14 @@ app.add_middleware(
 # CAR DATA
 # ======================
 
-CAR_DATA = {
-    "Toyota": ["Corolla", "Camry", "Highlander"],
-    "Honda": ["Accord", "Civic", "CR-V"],
-    "Lexus": ["RX 350", "ES 350"],
-    "Mercedes": ["C300", "E350"],
-}
+@app.get("/cars")
+async def get_cars():
+    return {
+        "Toyota": ["Corolla", "Camry", "Highlander"],
+        "Honda": ["Accord", "Civic", "CR-V"],
+        "Lexus": ["RX 350", "ES 350"],
+        "Mercedes": ["C300", "E350"]
+    }
 
 # ✅ CAR TYPE MAPPING
 CAR_TYPE = {
@@ -532,14 +534,6 @@ async def paystack_webhook(request: Request):
 
     return {"message": "Webhook processed"}
         
-# ======================
-# CARS
-# ======================
-
-@app.get("/cars")
-def get_cars():
-    return CAR_DATA
-
 
 # ======================
 # BOOKINGS
