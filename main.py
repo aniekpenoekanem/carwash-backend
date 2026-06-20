@@ -175,8 +175,10 @@ async def shutdown():
 # ======================
 
 @app.get("/")
-def root():
-    return {"message": "Car Wash API is running 🚀"}
+async def root():
+    return {"message": "Car Wash API is running 🚀",
+            "docs": "/docs",
+            "status": "online"}
 
 
 
