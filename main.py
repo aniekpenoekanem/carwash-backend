@@ -20,6 +20,11 @@ load_dotenv()
 
 PAYSTACK_SECRET_KEY = os.getenv("PAYSTACK_SECRET_KEY")
 
+if not PAYSTACK_SECRET_KEY:
+    raise RuntimeError(
+        "PAYSTACK_SECRET_KEY not found."
+    )
+
 print("Paystack key loaded:", bool(PAYSTACK_SECRET_KEY))
 
 # ======================
@@ -290,7 +295,7 @@ async def initialize_payment(booking_id: int):
         "email": booking["email"],
         "amount": int(amount * 100),
         "reference": reference,
-        "callback_url": "https://dime-nape-mangle.ngrok-free.dev/payment-success"
+        "callback_url": "https://carwash-backend-kv5q.onrender.com/payment-success"
     }
 
     headers = {
@@ -298,7 +303,7 @@ async def initialize_payment(booking_id: int):
         "Content-Type": "application/json"
     }
 
-    async with httpx.AsyncClient() as client:
+    async with httpx.AsyncClient(timeout=30) as client:
         response = await client.post(
             "https://api.paystack.co/transaction/initialize",
             json=payload,
@@ -324,7 +329,6 @@ async def initialize_payment(booking_id: int):
         "reference": reference,
     }
 
-
 # ======================
 # PAYSTACK VERIFICATION
 # ======================
@@ -335,7 +339,7 @@ async def verify_paystack_payment(reference: str):
         "Authorization": f"Bearer {PAYSTACK_SECRET_KEY}"
     }
 
-    async with httpx.AsyncClient() as client:
+    async with httpx.AsyncClient(timeout=30) as client:
         response = await client.get(
             f"https://api.paystack.co/transaction/verify/{reference}",
             headers=headers,
@@ -539,10 +543,54 @@ async def paystack_webhook(request: Request):
 # BOOKINGS
 # ======================
 
+@app.get("/booked_slots")
+async def get_booked_slots(date: str):
+
+    query = bookings.select()
+
+    rows = await database.fetch_all(query)
+
+    booked_slots = []
+
+    for row in rows:
+        booking_time = datetime.fromisoformat(
+            row["booking_time"]
+        )
+
+        if booking_time.date().isoformat() == date:
+            booked_slots.append(
+                booking_time.isoformat()
+            )
+
+    return booked_slots
+
+
 @app.post("/book")
 async def create_booking(booking: BookingCreate):
-    print(booking.dict())
+    print(
+    f"Booking received for "
+    f"{booking.customer_name}"
+)
     try:
+         # Check if the selected time has already been booked
+        existing_booking = await database.fetch_one(
+            bookings.select().where(
+                bookings.c.booking_time == booking.booking_time
+            )
+        )
+
+        if existing_booking:
+            raise HTTPException(
+                status_code=409,
+                detail="This time slot has already been booked."
+            )
+            
+        if booking.email and "@" not in booking.email:
+            raise HTTPException(
+        status_code=400,
+        detail="Invalid email address",
+    )
+        
         # ✅ Get service from DB
         service_query = services.select().where(
             services.c.id == booking.service_id
