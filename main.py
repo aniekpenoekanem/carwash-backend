@@ -273,16 +273,12 @@ async def initialize_payment(booking_id: int):
     if not booking:
         raise HTTPException(
             status_code=404,
-            detail="Booking not found"
+            detail="Booking not found",
         )
 
     booking = dict(booking)
 
-    print("BOOKING:", booking)
-    print("PAYSTACK EMAIL:", booking.get("email"))
-
     amount = booking["amount"]
-
     reference = f"CW_{uuid.uuid4().hex[:12]}"
 
     await database.execute(
@@ -295,23 +291,24 @@ async def initialize_payment(booking_id: int):
         "email": booking["email"],
         "amount": int(amount * 100),
         "reference": reference,
-        "callback_url": "https://carwash-backend-kv5q.onrender.com/payment-success"
-    }
-    print("CALLBACK URL:", payload["callback_url"])
-    headers = {
-        "Authorization": f"Bearer {PAYSTACK_SECRET_KEY}",
-        "Content-Type": "application/json"
+        "callback_url": "https://carwash-backend-kv5q.onrender.com/payment-success",
     }
 
-    async with httpx.AsyncClient(timeout=30) as client:
     print("=" * 60)
     print("PAYLOAD SENT TO PAYSTACK")
     print(payload)
     print("=" * 60)
-    response = await client.post(
+
+    headers = {
+        "Authorization": f"Bearer {PAYSTACK_SECRET_KEY}",
+        "Content-Type": "application/json",
+    }
+
+    async with httpx.AsyncClient(timeout=30) as client:
+        response = await client.post(
             "https://api.paystack.co/transaction/initialize",
             json=payload,
-            headers=headers
+            headers=headers,
         )
 
     print("PAYSTACK STATUS:", response.status_code)
@@ -319,13 +316,16 @@ async def initialize_payment(booking_id: int):
 
     data = response.json()
 
+    print("CALLBACK URL:", payload["callback_url"])
+    print("AUTH URL:", data["data"]["authorization_url"])
+
     if response.status_code != 200 or not data.get("status"):
         raise HTTPException(
             status_code=400,
             detail=data.get(
                 "message",
-                "Payment initialization failed"
-            )
+                "Payment initialization failed",
+            ),
         )
 
     return {
