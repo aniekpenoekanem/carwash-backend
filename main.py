@@ -297,6 +297,8 @@ async def initialize_payment(booking_id: int):
         "reference": reference,
         "callback_url": "https://carwash-backend-kv5q.onrender.com/payment-success"
     }
+    print("CALLBACK URL:", payload["callback_url"])
+    print("AUTH URL:", data["data"]["authorization_url"])
 
     headers = {
         "Authorization": f"Bearer {PAYSTACK_SECRET_KEY}",
