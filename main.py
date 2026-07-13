@@ -298,15 +298,17 @@ async def initialize_payment(booking_id: int):
         "callback_url": "https://carwash-backend-kv5q.onrender.com/payment-success"
     }
     print("CALLBACK URL:", payload["callback_url"])
-    print("AUTH URL:", data["data"]["authorization_url"])
-
     headers = {
         "Authorization": f"Bearer {PAYSTACK_SECRET_KEY}",
         "Content-Type": "application/json"
     }
 
     async with httpx.AsyncClient(timeout=30) as client:
-        response = await client.post(
+    print("=" * 60)
+    print("PAYLOAD SENT TO PAYSTACK")
+    print(payload)
+    print("=" * 60)
+    response = await client.post(
             "https://api.paystack.co/transaction/initialize",
             json=payload,
             headers=headers
@@ -422,6 +424,11 @@ async def payment_success(
     reference: str | None = None,
     trxref: str | None = None,
 ):
+    print("=" * 60)
+    print("PAYMENT CALLBACK HIT")
+    print("reference =", reference)
+    print("trxref =", trxref)
+    print("=" * 60)
 
     payment_reference = reference or trxref
 
@@ -632,9 +639,15 @@ async def create_booking(booking: BookingCreate):
         }
 
 
+    except HTTPException:
+        raise
+
     except Exception as e:
         print(f"BOOKING ERROR: {e}")
-        raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(
+            status_code=500,
+            detail="Internal server error",
+        )
 
 
 # ======================
