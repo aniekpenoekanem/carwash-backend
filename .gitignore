@@ -1,7 +1,37 @@
+# Environment variables
 .env
 
-carwash.db
-
-__pycache__/main.cpython-313.pyc
+# Database
+.db
 
 bookings_export.csv
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# Logs
+*.log
+build_log.txt
+
+# Python tooling
+.pytest_cache/
+.mypy_cache/
+
+# IDE
+.vscode/
+.idea/
+
+# macOS
+.DS_Store
+
+# Uploaded archives
+*.zip
+
