@@ -13,6 +13,7 @@ from app.core.config import settings
 
 from app.models.service import Service
 from app.models.customer import Customer
+from app.models.vehicle import Vehicle
 
 # Import models here when we create them.
 # Example:
