@@ -12,6 +12,7 @@ from sqlmodel import SQLModel
 from app.core.config import settings
 
 from app.models.service import Service
+from app.models.customer import Customer
 
 # Import models here when we create them.
 # Example:
