@@ -1,34 +1,41 @@
 from __future__ import annotations
 
-from datetime import datetime, UTC
 from decimal import Decimal
 from uuid import UUID, uuid4
 
-from sqlmodel import SQLModel, Field
-from sqlalchemy import Column, Numeric
+from sqlalchemy import Boolean, Numeric, String
+from sqlalchemy.orm import Mapped, mapped_column
 
-from app.models.base import TimestampMixin
+from app.models.base import Base, TimestampMixin
 
 
-class Service(TimestampMixin, SQLModel, table=True):
+class Service(Base, TimestampMixin):
     __tablename__ = "services"
 
-    id: UUID = Field(default_factory=uuid4, primary_key=True)
-
-    name: str = Field(index=True, max_length=100)
-
-    description: str | None = Field(
-        default=None,
-        max_length=500,
+    id: Mapped[UUID] = mapped_column(
+        primary_key=True,
+        default=uuid4,
     )
 
-    price: Decimal = Field(
-        sa_column=Column(
-            Numeric(10, 2),
-            nullable=False,
-        )
+    name: Mapped[str] = mapped_column(
+        String(100),
+        unique=True,
+        index=True,
+        nullable=False,
     )
 
-    is_active: bool = Field(default=True)
+    description: Mapped[str | None] = mapped_column(
+        String(500),
+        nullable=True,
+    )
 
-    
+    price: Mapped[Decimal] = mapped_column(
+        Numeric(10, 2),
+        nullable=False,
+    )
+
+    is_active: Mapped[bool] = mapped_column(
+        Boolean,
+        default=True,
+        nullable=False,
+    )

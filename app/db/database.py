@@ -22,7 +22,7 @@ from sqlalchemy.ext.asyncio import (
     async_sessionmaker,
     create_async_engine,
 )
-from sqlmodel import SQLModel
+from app.models.base import Base
 
 from app.core.config import settings
 from app.core.logger import logger

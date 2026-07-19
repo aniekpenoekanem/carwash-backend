@@ -2,18 +2,27 @@ from __future__ import annotations
 
 from datetime import UTC, datetime
 
-from sqlmodel import Field, SQLModel
+from sqlalchemy import DateTime
+from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
 
-class TimestampMixin(SQLModel):
-    """Provides timestamp fields for all models."""
+class Base(DeclarativeBase):
+    """Base class for all ORM models."""
+    pass
 
-    created_at: datetime = Field(
-        default_factory=lambda: datetime.now(UTC),
+
+class TimestampMixin:
+    """Adds created_at and updated_at timestamps."""
+
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        default=lambda: datetime.now(UTC),
         nullable=False,
     )
 
-    updated_at: datetime = Field(
-        default_factory=lambda: datetime.now(UTC),
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        default=lambda: datetime.now(UTC),
+        onupdate=lambda: datetime.now(UTC),
         nullable=False,
     )

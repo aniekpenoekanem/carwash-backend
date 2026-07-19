@@ -1,50 +1,62 @@
 from __future__ import annotations
 
-from datetime import UTC, datetime
 from uuid import UUID, uuid4
 
-from sqlmodel import Field, SQLModel
+from sqlalchemy import ForeignKey, Integer, String
+from sqlalchemy.orm import Mapped, mapped_column, relationship
+
+from app.models.base import Base, TimestampMixin
 
 
-class Vehicle(SQLModel, table=True):
+class Vehicle(Base, TimestampMixin):
     __tablename__ = "vehicles"
 
-    id: UUID = Field(default_factory=uuid4, primary_key=True)
-
-    customer_id: UUID = Field(
-        foreign_key="customers.id",
-        index=True,
+    id: Mapped[UUID] = mapped_column(
+        primary_key=True,
+        default=uuid4,
     )
 
-    make: str = Field(
-        max_length=100,
+    customer_id: Mapped[UUID] = mapped_column(
+        ForeignKey("customers.id"),
         index=True,
+        nullable=False,
     )
 
-    model: str = Field(
-        max_length=100,
-        index=True,
+    customer: Mapped["Customer"] = relationship(
+        back_populates="vehicles",
     )
 
-    year: int
+    make: Mapped[str] = mapped_column(
+        String(100),
+        index=True,
+        nullable=False,
+    )
 
-    color: str = Field(max_length=50)
+    model: Mapped[str] = mapped_column(
+        String(100),
+        index=True,
+        nullable=False,
+    )
 
-    plate_number: str = Field(
-        max_length=20,
+    year: Mapped[int] = mapped_column(
+        Integer,
+        nullable=False,
+    )
+
+    color: Mapped[str] = mapped_column(
+        String(50),
+        nullable=False,
+    )
+
+    plate_number: Mapped[str] = mapped_column(
+        String(20),
         unique=True,
         index=True,
+        nullable=False,
     )
 
-    body_type: str = Field(
-        max_length=50,
+    body_type: Mapped[str] = mapped_column(
+        String(50),
         index=True,
-    )
-
-    created_at: datetime = Field(
-        default_factory=lambda: datetime.now(UTC)
-    )
-
-    updated_at: datetime = Field(
-        default_factory=lambda: datetime.now(UTC)
+        nullable=False,
     )

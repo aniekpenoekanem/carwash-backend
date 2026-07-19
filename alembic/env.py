@@ -7,13 +7,15 @@ from sqlalchemy.ext.asyncio import async_engine_from_config
 
 from alembic import context
 
-from sqlmodel import SQLModel
+from app.models.base import Base
 
 from app.core.config import settings
 
-from app.models.service import Service
-from app.models.customer import Customer
-from app.models.vehicle import Vehicle
+import app.models.service
+import app.models.customer
+import app.models.vehicle
+import app.models.booking
+
 
 # Import models here when we create them.
 # Example:
@@ -35,7 +37,7 @@ if config.config_file_name is not None:
 # for 'autogenerate' support
 # from myapp import mymodel
 # target_metadata = mymodel.Base.metadata
-target_metadata = SQLModel.metadata
+target_metadata = Base.metadata
 
 # other values from the config, defined by the needs of env.py,
 # can be acquired:
@@ -57,11 +59,11 @@ def run_migrations_offline() -> None:
     """
     url = config.get_main_option("sqlalchemy.url")
     context.configure(
-    url=url,
-    target_metadata=target_metadata,
-    literal_binds=True,
-    dialect_opts={"paramstyle": "named"},
-    compare_type=True,
+        url=url,
+        target_metadata=target_metadata,
+        literal_binds=True,
+        dialect_opts={"paramstyle": "named"},
+        compare_type=True,
 )
 
     with context.begin_transaction():
@@ -70,9 +72,9 @@ def run_migrations_offline() -> None:
 
 def do_run_migrations(connection: Connection) -> None:
     context.configure(
-    connection=connection,
-    target_metadata=target_metadata,
-    compare_type=True, #helps Alembic detect column type changes during future migrations.
+        connection=connection,
+        target_metadata=target_metadata,
+        compare_type=True, #helps Alembic detect column type changes during future migrations.
 )
     with context.begin_transaction():
         context.run_migrations()

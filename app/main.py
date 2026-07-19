@@ -10,6 +10,8 @@ from fastapi import FastAPI
 
 from app.core.logger import logger
 from app.db.database import startup_database, shutdown_database
+from app.api.v1.bookings import router as booking_router
+from app.api.v1.services import router as service_router
 
 
 @asynccontextmanager
@@ -35,6 +37,15 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
+app.include_router(
+    booking_router,
+    prefix="/api/v1",
+)
+
+app.include_router(
+    service_router,
+    prefix="/api/v1",
+)
 
 @app.get("/", tags=["Health"])
 async def root():
