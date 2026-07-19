@@ -7,6 +7,13 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.models.base import Base, TimestampMixin
 
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from app.models.customer import Customer
+    from app.models.car_brand import CarBrand
+    from app.models.car_model import CarModel
+
 
 class Vehicle(Base, TimestampMixin):
     __tablename__ = "vehicles"
@@ -26,16 +33,23 @@ class Vehicle(Base, TimestampMixin):
         back_populates="vehicles",
     )
 
-    make: Mapped[str] = mapped_column(
-        String(100),
-        index=True,
+    brand_id: Mapped[UUID] = mapped_column(
+        ForeignKey("car_brands.id"),
         nullable=False,
+        index=True,
+    )
+    brand: Mapped["CarBrand"] = relationship(
+        back_populates="vehicles",
+    )
+    
+    car_model_id: Mapped[UUID] = mapped_column(
+        ForeignKey("car_models.id"),
+        nullable=False,
+        index=True,
     )
 
-    model: Mapped[str] = mapped_column(
-        String(100),
-        index=True,
-        nullable=False,
+    car_model: Mapped["CarModel"] = relationship(
+        back_populates="vehicles",
     )
 
     year: Mapped[int] = mapped_column(
@@ -51,12 +65,6 @@ class Vehicle(Base, TimestampMixin):
     plate_number: Mapped[str] = mapped_column(
         String(20),
         unique=True,
-        index=True,
-        nullable=False,
-    )
-
-    body_type: Mapped[str] = mapped_column(
-        String(50),
         index=True,
         nullable=False,
     )

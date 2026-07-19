@@ -15,6 +15,8 @@ import app.models.service
 import app.models.customer
 import app.models.vehicle
 import app.models.booking
+import app.models.car_brand
+import app.models.car_model
 
 
 # Import models here when we create them.
