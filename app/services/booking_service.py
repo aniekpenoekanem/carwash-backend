@@ -198,7 +198,7 @@ class BookingService:
         if booking.customer_id != customer_id:
             raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="You do not have permission to access this booking.",
+            detail="You do not have permission to pay for this booking.",
             )
 
         return booking

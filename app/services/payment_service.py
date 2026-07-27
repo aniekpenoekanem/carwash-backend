@@ -1,16 +1,14 @@
 from __future__ import annotations
-
 from typing import Any
 from uuid import UUID, uuid4
-
+import hashlib
+import hmac
+from app.core.config import settings
 from fastapi import HTTPException, status
 from app.integrations.paystack_client import PaystackClient
-
 from app.repositories.booking_repository import BookingRepository
 from app.repositories.payment_repository import PaymentRepository
-
 from datetime import datetime, timezone
-
 from app.core.enums import BookingStatus, PaymentStatus
 from app.schemas.booking import BookingUpdate
 from app.schemas.payment import PaymentUpdate
@@ -30,6 +28,26 @@ class PaymentService:
     def generate_reference(self) -> str:
         return f"CW-{uuid4().hex.upper()}"
 
+    def verify_webhook_signature(
+        self,
+        payload: bytes,
+        signature: str,
+    ) -> bool:
+        """
+        Verify that the webhook request originated from Paystack.
+        """
+
+        expected_signature = hmac.new(
+            settings.PAYSTACK_SECRET_KEY.encode(),
+            payload,
+            hashlib.sha512,
+        ).hexdigest()
+
+        return hmac.compare_digest(
+            expected_signature,
+            signature,
+        )
+    
     async def initialize_payment(
         self,
         booking_id: UUID,
@@ -153,8 +171,6 @@ class PaymentService:
                 "booking_id": str(payment.booking_id),
             }
 
-        print("Paystack verification response:")
-        print(gateway_data)
 
         if gateway_data.get("status") != "success":
             payment = await self.payment_repository.update(

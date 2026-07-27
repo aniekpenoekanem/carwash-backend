@@ -1,6 +1,12 @@
 from uuid import UUID
 
-from fastapi import APIRouter, Depends
+from fastapi import (
+    APIRouter,
+    Depends,
+    HTTPException,
+    Request,
+    status,
+)
 
 from app.dependencies.auth import require_customer
 from app.dependencies.payment import get_payment_service
@@ -35,4 +41,36 @@ async def verify_payment(
 ):
     return await service.verify_payment(
         reference,
+    )
+    
+@router.post("/webhook")
+async def payment_webhook(
+    request: Request,
+    service: PaymentService = Depends(
+        get_payment_service,
+    ),
+):
+    payload = await request.body()
+
+    signature = request.headers.get(
+        "x-paystack-signature",
+    )
+
+    if signature is None:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Missing Paystack signature.",
+        )
+
+    if not service.verify_webhook_signature(
+        payload,
+        signature,
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid Paystack signature.",
+        )
+
+    return await service.process_webhook(
+        await request.json(),
     )
