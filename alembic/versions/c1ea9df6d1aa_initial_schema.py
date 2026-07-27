@@ -1,8 +1,8 @@
 """initial schema
 
-Revision ID: 07257c62abe9
+Revision ID: c1ea9df6d1aa
 Revises: 
-Create Date: 2026-07-19 06:55:42.621662
+Create Date: 2026-07-21 21:04:12.699877
 
 """
 from typing import Sequence, Union
@@ -12,7 +12,7 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision: str = '07257c62abe9'
+revision: str = 'c1ea9df6d1aa'
 down_revision: Union[str, Sequence[str], None] = None
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
@@ -29,21 +29,6 @@ def upgrade() -> None:
     sa.PrimaryKeyConstraint('id')
     )
     op.create_index(op.f('ix_car_brands_name'), 'car_brands', ['name'], unique=True)
-    op.create_table('customers',
-    sa.Column('id', sa.Uuid(), nullable=False),
-    sa.Column('first_name', sa.String(length=100), nullable=False),
-    sa.Column('last_name', sa.String(length=100), nullable=False),
-    sa.Column('email', sa.String(length=255), nullable=False),
-    sa.Column('phone', sa.String(length=20), nullable=False),
-    sa.Column('is_active', sa.Boolean(), nullable=False),
-    sa.Column('created_at', sa.DateTime(timezone=True), nullable=False),
-    sa.Column('updated_at', sa.DateTime(timezone=True), nullable=False),
-    sa.PrimaryKeyConstraint('id')
-    )
-    op.create_index(op.f('ix_customers_email'), 'customers', ['email'], unique=True)
-    op.create_index(op.f('ix_customers_first_name'), 'customers', ['first_name'], unique=False)
-    op.create_index(op.f('ix_customers_last_name'), 'customers', ['last_name'], unique=False)
-    op.create_index(op.f('ix_customers_phone'), 'customers', ['phone'], unique=True)
     op.create_table('services',
     sa.Column('id', sa.Uuid(), nullable=False),
     sa.Column('name', sa.String(length=100), nullable=False),
@@ -55,26 +40,61 @@ def upgrade() -> None:
     sa.PrimaryKeyConstraint('id')
     )
     op.create_index(op.f('ix_services_name'), 'services', ['name'], unique=True)
+    op.create_table('users',
+    sa.Column('id', sa.Uuid(), nullable=False),
+    sa.Column('first_name', sa.String(length=100), nullable=False),
+    sa.Column('last_name', sa.String(length=100), nullable=False),
+    sa.Column('email', sa.String(length=255), nullable=False),
+    sa.Column('phone_number', sa.String(length=20), nullable=False),
+    sa.Column('password_hash', sa.String(length=255), nullable=False),
+    sa.Column('role', sa.Enum('ADMIN', 'CUSTOMER', name='userrole', native_enum=False), nullable=False),
+    sa.Column('is_active', sa.Boolean(), nullable=False),
+    sa.Column('is_verified', sa.Boolean(), nullable=False),
+    sa.Column('created_at', sa.DateTime(timezone=True), nullable=False),
+    sa.Column('updated_at', sa.DateTime(timezone=True), nullable=False),
+    sa.PrimaryKeyConstraint('id'),
+    sa.UniqueConstraint('phone_number')
+    )
+    op.create_index(op.f('ix_users_email'), 'users', ['email'], unique=True)
     op.create_table('car_models',
     sa.Column('id', sa.Uuid(), nullable=False),
     sa.Column('brand_id', sa.Uuid(), nullable=False),
     sa.Column('name', sa.String(length=100), nullable=False),
-    sa.Column('body_type', sa.String(length=50), nullable=False),
+    sa.Column('body_type', sa.Enum('SEDAN', 'SUV', 'HATCHBACK', 'PICKUP', 'COUPE', 'VAN', name='bodytype', native_enum=False), nullable=False),
     sa.Column('created_at', sa.DateTime(timezone=True), nullable=False),
     sa.Column('updated_at', sa.DateTime(timezone=True), nullable=False),
     sa.ForeignKeyConstraint(['brand_id'], ['car_brands.id'], ),
-    sa.PrimaryKeyConstraint('id')
+    sa.PrimaryKeyConstraint('id'),
+    sa.UniqueConstraint('brand_id', 'name', name='uq_car_model_brand_name')
     )
     op.create_index(op.f('ix_car_models_brand_id'), 'car_models', ['brand_id'], unique=False)
     op.create_index(op.f('ix_car_models_name'), 'car_models', ['name'], unique=False)
+    op.create_table('customers',
+    sa.Column('id', sa.Uuid(), nullable=False),
+    sa.Column('user_id', sa.Uuid(), nullable=False),
+    sa.Column('first_name', sa.String(length=100), nullable=False),
+    sa.Column('last_name', sa.String(length=100), nullable=False),
+    sa.Column('email', sa.String(length=255), nullable=False),
+    sa.Column('phone', sa.String(length=20), nullable=False),
+    sa.Column('is_active', sa.Boolean(), nullable=False),
+    sa.Column('created_at', sa.DateTime(timezone=True), nullable=False),
+    sa.Column('updated_at', sa.DateTime(timezone=True), nullable=False),
+    sa.ForeignKeyConstraint(['user_id'], ['users.id'], ),
+    sa.PrimaryKeyConstraint('id'),
+    sa.UniqueConstraint('user_id')
+    )
+    op.create_index(op.f('ix_customers_email'), 'customers', ['email'], unique=True)
+    op.create_index(op.f('ix_customers_first_name'), 'customers', ['first_name'], unique=False)
+    op.create_index(op.f('ix_customers_last_name'), 'customers', ['last_name'], unique=False)
+    op.create_index(op.f('ix_customers_phone'), 'customers', ['phone'], unique=True)
     op.create_table('vehicles',
     sa.Column('id', sa.Uuid(), nullable=False),
     sa.Column('customer_id', sa.Uuid(), nullable=False),
     sa.Column('brand_id', sa.Uuid(), nullable=False),
     sa.Column('car_model_id', sa.Uuid(), nullable=False),
-    sa.Column('year', sa.Integer(), nullable=False),
+    sa.Column('year', sa.Integer(), nullable=True),
     sa.Column('color', sa.String(length=50), nullable=False),
-    sa.Column('plate_number', sa.String(length=20), nullable=False),
+    sa.Column('registration_number', sa.String(length=20), nullable=False),
     sa.Column('created_at', sa.DateTime(timezone=True), nullable=False),
     sa.Column('updated_at', sa.DateTime(timezone=True), nullable=False),
     sa.ForeignKeyConstraint(['brand_id'], ['car_brands.id'], ),
@@ -85,7 +105,7 @@ def upgrade() -> None:
     op.create_index(op.f('ix_vehicles_brand_id'), 'vehicles', ['brand_id'], unique=False)
     op.create_index(op.f('ix_vehicles_car_model_id'), 'vehicles', ['car_model_id'], unique=False)
     op.create_index(op.f('ix_vehicles_customer_id'), 'vehicles', ['customer_id'], unique=False)
-    op.create_index(op.f('ix_vehicles_plate_number'), 'vehicles', ['plate_number'], unique=True)
+    op.create_index(op.f('ix_vehicles_registration_number'), 'vehicles', ['registration_number'], unique=True)
     op.create_table('bookings',
     sa.Column('id', sa.Uuid(), nullable=False),
     sa.Column('customer_id', sa.Uuid(), nullable=False),
@@ -94,8 +114,8 @@ def upgrade() -> None:
     sa.Column('scheduled_date', sa.Date(), nullable=False),
     sa.Column('scheduled_time', sa.Time(), nullable=False),
     sa.Column('price_at_booking', sa.Numeric(precision=10, scale=2), nullable=False),
-    sa.Column('status', sa.Enum('PENDING', 'CONFIRMED', 'IN_PROGRESS', 'COMPLETED', 'CANCELLED', name='bookingstatus'), nullable=False),
-    sa.Column('payment_status', sa.Enum('PENDING', 'PAID', 'FAILED', 'REFUNDED', name='paymentstatus'), nullable=False),
+    sa.Column('status', sa.Enum('PENDING', 'CONFIRMED', 'IN_PROGRESS', 'COMPLETED', 'CANCELLED', name='bookingstatus', native_enum=False), nullable=False),
+    sa.Column('payment_status', sa.Enum('PENDING', 'PAID', 'FAILED', 'REFUNDED', name='paymentstatus', native_enum=False), nullable=False),
     sa.Column('notes', sa.String(length=500), nullable=True),
     sa.Column('created_at', sa.DateTime(timezone=True), nullable=False),
     sa.Column('updated_at', sa.DateTime(timezone=True), nullable=False),
@@ -122,21 +142,23 @@ def downgrade() -> None:
     op.drop_index(op.f('ix_bookings_scheduled_date'), table_name='bookings')
     op.drop_index(op.f('ix_bookings_customer_id'), table_name='bookings')
     op.drop_table('bookings')
-    op.drop_index(op.f('ix_vehicles_plate_number'), table_name='vehicles')
+    op.drop_index(op.f('ix_vehicles_registration_number'), table_name='vehicles')
     op.drop_index(op.f('ix_vehicles_customer_id'), table_name='vehicles')
     op.drop_index(op.f('ix_vehicles_car_model_id'), table_name='vehicles')
     op.drop_index(op.f('ix_vehicles_brand_id'), table_name='vehicles')
     op.drop_table('vehicles')
-    op.drop_index(op.f('ix_car_models_name'), table_name='car_models')
-    op.drop_index(op.f('ix_car_models_brand_id'), table_name='car_models')
-    op.drop_table('car_models')
-    op.drop_index(op.f('ix_services_name'), table_name='services')
-    op.drop_table('services')
     op.drop_index(op.f('ix_customers_phone'), table_name='customers')
     op.drop_index(op.f('ix_customers_last_name'), table_name='customers')
     op.drop_index(op.f('ix_customers_first_name'), table_name='customers')
     op.drop_index(op.f('ix_customers_email'), table_name='customers')
     op.drop_table('customers')
+    op.drop_index(op.f('ix_car_models_name'), table_name='car_models')
+    op.drop_index(op.f('ix_car_models_brand_id'), table_name='car_models')
+    op.drop_table('car_models')
+    op.drop_index(op.f('ix_users_email'), table_name='users')
+    op.drop_table('users')
+    op.drop_index(op.f('ix_services_name'), table_name='services')
+    op.drop_table('services')
     op.drop_index(op.f('ix_car_brands_name'), table_name='car_brands')
     op.drop_table('car_brands')
     # ### end Alembic commands ###

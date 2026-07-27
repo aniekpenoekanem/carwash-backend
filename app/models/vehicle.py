@@ -13,11 +13,12 @@ if TYPE_CHECKING:
     from app.models.customer import Customer
     from app.models.car_brand import CarBrand
     from app.models.car_model import CarModel
-
+    from app.models.booking import Booking
+    
 
 class Vehicle(Base, TimestampMixin):
     __tablename__ = "vehicles"
-
+    
     id: Mapped[UUID] = mapped_column(
         primary_key=True,
         default=uuid4,
@@ -52,19 +53,23 @@ class Vehicle(Base, TimestampMixin):
         back_populates="vehicles",
     )
 
-    year: Mapped[int] = mapped_column(
+    year: Mapped[int | None] = mapped_column(
         Integer,
-        nullable=False,
+     nullable=True,
     )
-
+    
     color: Mapped[str] = mapped_column(
         String(50),
         nullable=False,
     )
 
-    plate_number: Mapped[str] = mapped_column(
+    registration_number: Mapped[str] = mapped_column(
         String(20),
         unique=True,
-        index=True,
         nullable=False,
+        index=True,
+    )
+    
+    bookings: Mapped[list["Booking"]] = relationship(
+        back_populates="vehicle",
     )

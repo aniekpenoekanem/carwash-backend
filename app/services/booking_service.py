@@ -1,71 +1,127 @@
 from __future__ import annotations
 
-from datetime import date, datetime, time
-from decimal import Decimal
+from datetime import date, time
+
+from uuid import UUID
 
 from fastapi import HTTPException, status
-from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.exc import IntegrityError
+from app.models.booking import Booking
+from app.repositories.booking_repository import BookingRepository
+from app.repositories.customer_repository import CustomerRepository
+from app.repositories.vehicle_repository import VehicleRepository
+from app.repositories.service_repository import ServiceRepository
 
-from app.models.booking import (
-    Booking,
+from app.core.enums import (
     BookingStatus,
     PaymentStatus,
 )
-from app.repositories.booking_repository import BookingRepository
-from app.repositories.customer_repository import CustomerRepository
-from app.repositories.service_repository import ServiceRepository
-from app.repositories.vehicle_repository import VehicleRepository
-from app.schemas.booking import BookingCreate, BookingRead
+
+from app.schemas.booking import (
+    BookingCreate,
+    BookingUpdate,
+)
+
+OPENING_TIME = time(8, 0)
+CLOSING_TIME = time(17, 0)
+
+WORKING_DAYS = {
+    0,
+    1,
+    2,
+    3,
+    4,
+    5,
+}
+
+ALLOWED_STATUS_TRANSITIONS = {
+    BookingStatus.PENDING: {
+        BookingStatus.CONFIRMED,
+        BookingStatus.CANCELLED,
+    },
+    BookingStatus.CONFIRMED: {
+        BookingStatus.IN_PROGRESS,
+        BookingStatus.CANCELLED,
+    },
+    BookingStatus.IN_PROGRESS: {
+        BookingStatus.COMPLETED,
+    },
+    BookingStatus.COMPLETED: set(),
+    BookingStatus.CANCELLED: set(),
+}
+
+ALLOWED_PAYMENT_TRANSITIONS = {
+    PaymentStatus.PENDING: {
+        PaymentStatus.PAID,
+        PaymentStatus.FAILED,
+    },
+    PaymentStatus.PAID: {
+        PaymentStatus.REFUNDED,
+    },
+    PaymentStatus.FAILED: set(),
+    PaymentStatus.REFUNDED: set(),
+}
 
 
 class BookingService:
-    OPENING_TIME = time(8, 0)
-    CLOSING_TIME = time(17, 0)
-
-    def __init__(self, session: AsyncSession):
-        self.session = session
-
-        self.booking_repo = BookingRepository(session)
-        self.customer_repo = CustomerRepository(session)
-        self.vehicle_repo = VehicleRepository(session)
-        self.service_repo = ServiceRepository(session)
+    def __init__(
+        self,
+        booking_repository: BookingRepository,
+        customer_repository: CustomerRepository,
+        vehicle_repository: VehicleRepository,
+        service_repository: ServiceRepository,
+    ):
+        self.booking_repository = booking_repository
+        self.customer_repository = customer_repository
+        self.vehicle_repository = vehicle_repository
+        self.service_repository = service_repository
 
     async def create_booking(
         self,
         booking_data: BookingCreate,
-    ) -> BookingRead:
+        customer_id: UUID,
+    ) -> Booking:
 
-        customer = await self.customer_repo.get_by_id(
-            booking_data.customer_id
+        customer = await self.customer_repository.get_by_id(
+            customer_id,
         )
+
         if customer is None:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="Customer not found.",
             )
 
-        vehicle = await self.vehicle_repo.get_by_id(
-            booking_data.vehicle_id
+        vehicle = await self.vehicle_repository.get_by_id(
+            booking_data.vehicle_id,
         )
+
         if vehicle is None:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="Vehicle not found.",
             )
 
-        if vehicle.customer_id != customer.id:
+        if vehicle.customer_id != customer_id:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Vehicle does not belong to this customer.",
+                detail="Vehicle does not belong to the selected customer.",
             )
 
-        service = await self.service_repo.get_by_id(
-            booking_data.service_id
+        service = await self.service_repository.get_by_id(
+            booking_data.service_id,
         )
+
         if service is None:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="Service not found.",
+            )
+
+        if not service.is_active:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Selected service is inactive.",
             )
 
         if booking_data.scheduled_date < date.today():
@@ -74,43 +130,225 @@ class BookingService:
                 detail="Booking date cannot be in the past.",
             )
 
-        if not (
-            self.OPENING_TIME
-            <= booking_data.scheduled_time
-            <= self.CLOSING_TIME
+        if booking_data.scheduled_date.weekday() not in WORKING_DAYS:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Bookings are not available on this day.",
+            )
+
+        if (
+            booking_data.scheduled_time < OPENING_TIME
+            or booking_data.scheduled_time >= CLOSING_TIME
         ):
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Bookings are accepted between 08:00 and 17:00.",
+                detail="Bookings are allowed only between 08:00 and 17:00.",
             )
 
-        slot_taken = await self.booking_repo.slot_exists(
-            booking_data.scheduled_date,
-            booking_data.scheduled_time,
+        existing_booking = (
+            await self.booking_repository.get_by_slot(
+                booking_data.scheduled_date,
+                booking_data.scheduled_time,
+            )
         )
 
-        if slot_taken:
+        if existing_booking is not None:
             raise HTTPException(
                 status_code=status.HTTP_409_CONFLICT,
-                detail="Selected time slot is already booked.",
+                detail="The selected time slot is already booked.",
             )
 
-        booking = Booking(
-            customer_id=customer.id,
-            vehicle_id=vehicle.id,
-            service_id=service.id,
-            scheduled_date=booking_data.scheduled_date,
-            scheduled_time=booking_data.scheduled_time,
-            price_at_booking=Decimal(service.price),
-            status=BookingStatus.PENDING,
-            payment_status=PaymentStatus.PENDING,
-            notes=booking_data.notes,
+        booking_payload = booking_data.model_dump()
+        
+        # Never trust the client for these values.
+        booking_payload["customer_id"] = customer_id
+        booking_payload["price_at_booking"] = service.price
+        
+        try:
+            return await self.booking_repository.create(
+                booking_payload,
+            )
+        except IntegrityError:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="The selected time slot is already booked.",
+            )
+
+    async def get_bookings(
+        self,
+    ) -> list[Booking]:
+        return await self.booking_repository.get_all()
+
+    async def get_booking(
+        self,
+        booking_id: UUID,
+        customer_id: UUID,
+    ) -> Booking:
+
+        booking = await self.booking_repository.get_by_id(
+        booking_id,
         )
 
-        await self.booking_repo.create(booking)
+        if booking is None:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Booking not found.",
+            )
 
-        await self.session.commit()
+        if booking.customer_id != customer_id:
+            raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You do not have permission to access this booking.",
+            )
 
-        await self.session.refresh(booking)
+        return booking
 
-        return BookingRead.model_validate(booking)
+    async def get_customer_bookings(
+        self,
+        customer_id: UUID,
+    ) -> list[Booking]:
+
+        customer = await self.customer_repository.get_by_id(
+            customer_id,
+        )
+
+        if customer is None:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Customer not found.",
+            )
+
+        return await self.booking_repository.get_by_customer(
+            customer_id,
+        )
+
+    async def update_booking(
+        self,
+        booking_id: UUID,
+        booking_data: BookingUpdate,
+        customer_id: UUID,
+    ) -> Booking:
+
+        booking = await self.booking_repository.get_by_id(
+            booking_id,
+        )
+
+        if booking is None:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Booking not found.",
+            )
+
+        if booking.customer_id != customer_id:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="You do not have permission to update this booking.",
+            )
+
+        booking_date = (
+            booking_data.scheduled_date
+            if booking_data.scheduled_date is not None
+            else booking.scheduled_date
+        )
+
+        booking_time = (
+            booking_data.scheduled_time
+            if booking_data.scheduled_time is not None
+            else booking.scheduled_time
+        )
+
+        if booking_date < date.today():
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Booking date cannot be in the past.",
+            )
+
+        if booking_date.weekday() not in WORKING_DAYS:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Bookings are not available on this day.",
+            )
+
+        if (
+            booking_time < OPENING_TIME
+            or booking_time >= CLOSING_TIME
+        ):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Bookings are allowed only between 08:00 and 17:00.",
+            )
+
+        existing_booking = await self.booking_repository.get_by_slot(
+            booking_date,
+            booking_time,
+        )
+
+        if (
+            existing_booking is not None
+            and existing_booking.id != booking.id
+        ):
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="The selected time slot is already booked.",
+            )
+
+        if booking_data.status is not None:
+            allowed_statuses = ALLOWED_STATUS_TRANSITIONS[
+                booking.status
+            ]
+
+            if booking_data.status not in allowed_statuses:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=(
+                        f"Cannot change booking status "
+                        f"from '{booking.status.value}' "
+                        f"to '{booking_data.status.value}'."
+                    ),
+                )
+
+        if booking_data.payment_status is not None:
+            allowed_payments = ALLOWED_PAYMENT_TRANSITIONS[
+                booking.payment_status
+            ]
+
+            if booking_data.payment_status not in allowed_payments:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=(
+                        f"Cannot change payment status "
+                        f"from '{booking.payment_status.value}' "
+                        f"to '{booking_data.payment_status.value}'."
+                    ),
+                )
+
+        return await self.booking_repository.update(
+            booking,
+            booking_data,
+        )
+
+    async def delete_booking(
+        self,
+        booking_id: UUID,
+        customer_id: UUID,
+    ) -> None:
+
+        booking = await self.booking_repository.get_by_id(
+            booking_id,
+        )
+
+        if booking is None:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Booking not found.",
+            )
+
+        if booking.customer_id != customer_id:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="You do not have permission to delete this booking.",
+            )
+            
+        await self.booking_repository.delete(
+            booking,
+        )

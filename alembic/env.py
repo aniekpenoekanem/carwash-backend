@@ -17,7 +17,7 @@ import app.models.vehicle
 import app.models.booking
 import app.models.car_brand
 import app.models.car_model
-
+import app.models.user
 
 # Import models here when we create them.
 # Example:
