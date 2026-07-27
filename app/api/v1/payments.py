@@ -46,12 +46,13 @@ async def verify_payment(
 @router.post("/webhook")
 async def payment_webhook(
     request: Request,
-    service: PaymentService = Depends(get_payment_service),
 ):
-    print("========== WEBHOOK RECEIVED ==========")
+    return {
+        "chatgpt_test": "deployment_20260727"
+    }
 
-    payload = await request.json()
-
-    print(payload)
-
-    return {"message": "Webhook received"}
+@router.get("/version")
+async def version():
+    return {
+        "version": "backend-test-2026-07-27-01"
+    }
