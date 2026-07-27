@@ -43,16 +43,3 @@ async def verify_payment(
         reference,
     )
     
-@router.post("/webhook")
-async def payment_webhook(
-    request: Request,
-):
-    return {
-        "chatgpt_test": "deployment_20260727"
-    }
-
-@router.get("/version")
-async def version():
-    return {
-        "version": "backend-test-2026-07-27-01"
-    }
