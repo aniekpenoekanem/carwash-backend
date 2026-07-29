@@ -1,5 +1,6 @@
 from __future__ import annotations
 from app.repositories.user_repository import UserRepository
+from app.core.config import settings
 
 from fastapi import APIRouter, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -80,3 +81,9 @@ async def debug_user(
         "created_at": user.created_at,
         "updated_at": user.updated_at,
     }
+    
+@router.get("/debug/database")
+async def debug_database():
+    return {
+        "database_url": settings.DATABASE_URL,
+    }    
