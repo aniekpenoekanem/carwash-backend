@@ -21,6 +21,7 @@ from app.schemas.auth import (
     LoginRequest,
     RegisterRequest,
     TokenResponse,
+    UserResponse,
 )
 
 
@@ -82,6 +83,7 @@ class AuthService:
 
         return TokenResponse(
             access_token=token,
+            user=UserResponse.model_validate(user),
         )
 
     async def login(
@@ -132,4 +134,5 @@ class AuthService:
 
         return TokenResponse(
             access_token=token,
+            user=UserResponse.model_validate(user),
         )

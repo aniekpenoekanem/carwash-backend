@@ -18,11 +18,6 @@ class LoginRequest(BaseModel):
     password: str
 
 
-class TokenResponse(BaseModel):
-    access_token: str
-    token_type: str = "bearer"
-
-
 class UserResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
@@ -34,3 +29,9 @@ class UserResponse(BaseModel):
     role: UserRole
     is_active: bool
     is_verified: bool
+
+
+class TokenResponse(BaseModel):
+    access_token: str
+    token_type: str = "bearer"
+    user: UserResponse
