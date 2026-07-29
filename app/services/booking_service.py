@@ -22,6 +22,12 @@ from app.schemas.booking import (
     BookingUpdate,
 )
 
+from app.schemas.booking_history import (
+    BookingHistoryResponse,
+    VehicleSummary,
+    ServiceSummary,
+)
+
 OPENING_TIME = time(8, 0)
 CLOSING_TIME = time(17, 0)
 
@@ -352,3 +358,52 @@ class BookingService:
         await self.booking_repository.delete(
             booking,
         )
+        
+    async def get_booking_history(
+        self,
+        customer_id: UUID,
+    ) -> list[BookingHistoryResponse]:
+
+        customer = await self.customer_repository.get_by_id(
+            customer_id,
+        )
+
+        if customer is None:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Customer not found.",
+            )
+
+        bookings = await self.booking_repository.get_history_by_customer(
+            customer_id,
+        )
+
+        history: list[BookingHistoryResponse] = []
+
+        for booking in bookings:
+            history.append(
+                BookingHistoryResponse(
+                    id=booking.id,
+                    scheduled_date=booking.scheduled_date,
+                    scheduled_time=booking.scheduled_time,
+                    price_at_booking=booking.price_at_booking,
+                    status=booking.status,
+                    payment_status=booking.payment_status,
+                    notes=booking.notes,
+                    vehicle=VehicleSummary(
+                        id=booking.vehicle.id,
+                        registration_number=booking.vehicle.registration_number,
+                        color=booking.vehicle.color,
+                        year=booking.vehicle.year,
+                        brand_name=booking.vehicle.brand.name,
+                        model_name=booking.vehicle.car_model.name,
+                    ),
+                    service=ServiceSummary(
+                        id=booking.service.id,
+                        name=booking.service.name,
+                        price=booking.service.price,
+                    ),
+                )
+            )
+
+        return history        

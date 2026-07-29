@@ -6,7 +6,12 @@ from uuid import UUID
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 
+from app.models.vehicle import Vehicle
+from app.models.car_brand import CarBrand
+from app.models.car_model import CarModel
+from app.models.service import Service
 from app.models.booking import Booking
 from app.schemas.booking import BookingUpdate
 
@@ -158,3 +163,29 @@ class BookingRepository:
         except Exception:
             await self.session.rollback()
             raise
+        
+    async def get_history_by_customer(
+        self,
+        customer_id: UUID,
+    ) -> list[Booking]:
+        result = await self.session.execute(
+            select(Booking)
+            .options(
+                selectinload(Booking.vehicle)
+                .selectinload(Vehicle.brand),
+
+                selectinload(Booking.vehicle)
+                .selectinload(Vehicle.car_model),
+
+                selectinload(Booking.service),
+            )
+            .where(
+                Booking.customer_id == customer_id,
+            )
+            .order_by(
+                Booking.scheduled_date.desc(),
+                Booking.scheduled_time.desc(),
+            )
+        )
+
+        return list(result.scalars().all())

@@ -2,6 +2,8 @@ from uuid import UUID
 
 from fastapi import APIRouter, Depends, Response, status
 
+from app.schemas.booking_history import BookingHistoryResponse
+
 from app.dependencies.auth import require_customer
 from app.dependencies.booking import get_booking_service
 from app.models.user import User
@@ -46,6 +48,17 @@ async def get_bookings(
         current_user.customer.id,
     )
 
+@router.get(
+    "/history",
+    response_model=list[BookingHistoryResponse],
+)
+async def get_booking_history(
+    current_user: User = Depends(require_customer),
+    service: BookingService = Depends(get_booking_service),
+):
+    return await service.get_booking_history(
+        current_user.customer.id,
+    )
 
 @router.get(
     "/{booking_id}",
