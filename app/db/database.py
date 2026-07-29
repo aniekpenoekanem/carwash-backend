@@ -28,12 +28,27 @@ from app.core.config import settings
 from app.core.logger import logger
 
 
+
 # ---------------------------------------------------------
 # Database Engine
 # ---------------------------------------------------------
 
+database_url = settings.DATABASE_URL
+
+# Render provides PostgreSQL URLs like:
+# postgresql://...
+# SQLAlchemy async expects:
+# postgresql+asyncpg://...
+
+if database_url.startswith("postgresql://"):
+    database_url = database_url.replace(
+        "postgresql://",
+        "postgresql+asyncpg://",
+        1,
+    )
+
 engine: AsyncEngine = create_async_engine(
-    settings.DATABASE_URL,
+    database_url,
     echo=settings.DEBUG,
     future=True,
     pool_pre_ping=True,

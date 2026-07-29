@@ -93,6 +93,21 @@ class AuthService:
             payload.email,
         )
 
+        print("\n========== LOGIN DEBUG ==========")
+        print(f"Email entered : {payload.email}")
+        print(f"User found: {user is not None}")
+        
+        if user:
+            print(f"Database email: {user.email}")
+            print(
+                "Password verified:",
+                verify_password(
+                    payload.password,
+                    user.password_hash,
+                ),
+            )
+        print("=================================\n")
+        
         if not user:
             raise InvalidCredentialsError(
                 "Invalid email or password."

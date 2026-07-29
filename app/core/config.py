@@ -42,7 +42,7 @@ class Settings(BaseSettings):
     # -----------------------------------------------------
 
     DATABASE_URL: str = Field(
-        default=f"sqlite+aiosqlite:///{BASE_DIR}/carwash.db"
+        default=f"sqlite+aiosqlite:///{BASE_DIR}/carwash.db",
     )
 
     # -----------------------------------------------------
