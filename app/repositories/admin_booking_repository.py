@@ -9,6 +9,7 @@ from sqlalchemy.orm import selectinload
 
 from app.core.enums import BookingStatus, PaymentStatus
 from app.models.booking import Booking
+from app.models.vehicle import Vehicle
 
 
 class AdminBookingRepository:
@@ -31,8 +32,9 @@ class AdminBookingRepository:
             select(Booking)
             .options(
                 selectinload(Booking.customer),
-                selectinload(Booking.vehicle),
                 selectinload(Booking.service),
+                selectinload(Booking.vehicle).selectinload(Vehicle.brand),
+                selectinload(Booking.vehicle).selectinload(Vehicle.car_model),
             )
         )
 
@@ -88,8 +90,9 @@ class AdminBookingRepository:
             select(Booking)
             .options(
                 selectinload(Booking.customer),
-                selectinload(Booking.vehicle),
                 selectinload(Booking.service),
+                selectinload(Booking.vehicle).selectinload(Vehicle.brand),
+                selectinload(Booking.vehicle).selectinload(Vehicle.car_model),
             )
             .where(
                 Booking.id == booking_id,

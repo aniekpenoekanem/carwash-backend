@@ -12,6 +12,9 @@ from app.repositories.admin_booking_repository import (
 from app.schemas.admin_booking import (
     AdminBookingResponse,
     BookingListResponse,
+    AdminCustomerSummary,
+    AdminVehicleSummary,
+    AdminServiceSummary,
 )
 
 
@@ -41,9 +44,7 @@ class AdminBookingService:
 
         return BookingListResponse(
             items=[
-                AdminBookingResponse.model_validate(
-                    booking
-                )
+                self._to_response(booking)
                 for booking in bookings
             ],
             total=total,
@@ -66,9 +67,7 @@ class AdminBookingService:
                 detail="Booking not found.",
             )
 
-        return AdminBookingResponse.model_validate(
-            booking
-        )
+        return self._to_response(booking)
 
     async def update_status(
         self,
@@ -120,9 +119,7 @@ class AdminBookingService:
             booking
         )
 
-        return AdminBookingResponse.model_validate(
-            booking
-        )
+        return self._to_response(booking)
 
     async def delete_booking(
         self,
@@ -140,3 +137,45 @@ class AdminBookingService:
             )
 
         await self.repository.delete(booking)
+        
+    def _to_response(self, booking) -> AdminBookingResponse:
+        return AdminBookingResponse(
+            id=booking.id,
+
+            customer=AdminCustomerSummary(
+                id=booking.customer.id,
+                first_name=booking.customer.first_name,
+                last_name=booking.customer.last_name,
+                email=booking.customer.email,
+                phone=booking.customer.phone,
+            ),
+
+            vehicle=AdminVehicleSummary(
+                id=booking.vehicle.id,
+                registration_number=booking.vehicle.registration_number,
+                color=booking.vehicle.color,
+                year=booking.vehicle.year,
+                brand=booking.vehicle.brand.name,
+                model=booking.vehicle.car_model.name,
+                body_type=booking.vehicle.car_model.body_type,
+            ),
+
+            service=AdminServiceSummary(
+                id=booking.service.id,
+                name=booking.service.name,
+                price=booking.service.price,
+            ),
+
+            scheduled_date=booking.scheduled_date,
+            scheduled_time=booking.scheduled_time,
+
+            price_at_booking=booking.price_at_booking,
+
+            status=booking.status,
+            payment_status=booking.payment_status,
+
+            notes=booking.notes,
+
+            created_at=booking.created_at,
+            updated_at=booking.updated_at,
+        )   
