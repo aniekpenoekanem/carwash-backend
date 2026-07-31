@@ -5,7 +5,6 @@ Application entry point.
 from __future__ import annotations
 
 from contextlib import asynccontextmanager
-
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 
@@ -37,6 +36,7 @@ from app.api.v1.admin_customer import (router as admin_customer_router)
 from app.api.v1.availability import (router as availability_router)
 from app.api.v1.payments import router as payment_router
 from app.api.v1.webhook import router as webhook_router
+from app.api.v1.admin_service import (router as admin_service_router)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -136,6 +136,8 @@ app.include_router(admin_customer_router, prefix="/api/v1")
 app.include_router(availability_router, prefix="/api/v1")
 app.include_router(payment_router, prefix="/api/v1")
 app.include_router(webhook_router, prefix="/api/v1")
+app.include_router(admin_service_router, prefix="/api/v1")
+
 
 # ---------------------------------------------------------
 # Health Endpoints

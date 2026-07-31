@@ -13,6 +13,12 @@ from app.core.enums import BookingStatus, PaymentStatus
 from app.schemas.booking import BookingUpdate
 from app.schemas.payment import PaymentUpdate
 
+from app.schemas.admin_payment import (
+    AdminPaymentDetails,
+    AdminPaymentListResponse,
+    AdminPaymentSummary,
+)
+
 
 class PaymentService:
     def __init__(
@@ -256,3 +262,88 @@ class PaymentService:
             gateway_data,
         ) 
     
+    async def get_payments(
+        self,
+        page: int,
+        size: int,
+        search: str | None = None,
+        status: PaymentStatus | None = None,
+    ) -> AdminPaymentListResponse:
+
+        payments = await self.payment_repository.get_all_paginated(
+            page=page,
+            size=size,
+            search=search,
+            status=status,
+        )
+
+        total = await self.payment_repository.count(
+            search=search,
+            status=status,
+        )
+
+        items = [
+            AdminPaymentSummary(
+                id=payment.id,
+                booking_id=payment.booking.id,
+                customer_name=f"{payment.booking.customer.first_name} "
+                              f"{payment.booking.customer.last_name}",
+                customer_email=payment.booking.customer.email,
+                service_name=payment.booking.service.name,
+                vehicle=f"{payment.booking.vehicle.registration_number}",
+                amount=payment.amount,
+                reference=payment.reference,
+                status=payment.status,
+                provider=payment.provider,
+                paid_at=payment.paid_at,
+                created_at=payment.created_at,
+            )
+            for payment in payments
+        ]
+
+        return AdminPaymentListResponse(
+            items=items,
+            total=total,
+            page=page,
+            size=size,
+        )
+
+    async def get_payment_details(
+        self,
+        payment_id: UUID,
+    ) -> AdminPaymentDetails:
+
+        payment = await self.payment_repository.get_admin_by_id(
+            payment_id,
+        )
+
+        if payment is None:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Payment not found.",
+            )
+
+        booking = payment.booking
+        customer = booking.customer
+        vehicle = booking.vehicle
+        service = booking.service
+
+        return AdminPaymentDetails(
+            id=payment.id,
+            booking_id=booking.id,
+            amount=payment.amount,
+            currency=payment.currency,
+            provider=payment.provider,
+            reference=payment.reference,
+            access_code=payment.access_code,
+            authorization_url=payment.authorization_url,
+            gateway_response=payment.gateway_response,
+            status=payment.status,
+            paid_at=payment.paid_at,
+            created_at=payment.created_at,
+            customer_name=f"{customer.first_name} {customer.last_name}",
+            customer_email=customer.email,
+            customer_phone=customer.phone,
+            vehicle=vehicle.registration_number,
+            service_name=service.name,
+        )

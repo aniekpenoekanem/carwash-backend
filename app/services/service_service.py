@@ -106,10 +106,18 @@ class ServiceService:
                 detail="Service not found.",
             )
 
+        print("Before:", service.is_active)
+
         service.is_active = False
-        
+
+        print("After:", service.is_active)
+
         await self.session.commit()
+
         await self.session.refresh(service)
+
+        print("Database after refresh:", service.is_active)
+        
         
     async def list_services(
         self,

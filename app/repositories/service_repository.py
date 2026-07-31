@@ -36,7 +36,7 @@ class ServiceRepository(BaseRepository[Service]):
 
     async def list_all(
         self,
-        active_only: bool = False,
+        active_only: bool = True,
     ) -> list[Service]:
 
         query = select(Service)

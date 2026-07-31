@@ -1,12 +1,9 @@
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, Query, status
+from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.dependencies.admin_service import (
-    get_admin_service_service,
-)
-from app.dependencies.auth import require_admin
-from app.models.user import User
+from app.db.session import get_session
 from app.schemas.service import (
     ServiceCreate,
     ServiceRead,
@@ -25,18 +22,11 @@ router = APIRouter(
     response_model=list[ServiceRead],
 )
 async def list_services(
-    active_only: bool = Query(
-        default=True,
-        description="Return only active services",
-    ),
-    admin: User = Depends(require_admin),
-    service: ServiceService = Depends(
-        get_admin_service_service,
-    ),
+    active_only: bool = Query(False),
+    session: AsyncSession = Depends(get_session),
 ):
-    return await service.list_services(
-        active_only=active_only,
-    )
+    service = ServiceService(session)
+    return await service.list_services(active_only=active_only)
 
 
 @router.get(
@@ -45,11 +35,9 @@ async def list_services(
 )
 async def get_service(
     service_id: UUID,
-    admin: User = Depends(require_admin),
-    service: ServiceService = Depends(
-        get_admin_service_service,
-    ),
+    session: AsyncSession = Depends(get_session),
 ):
+    service = ServiceService(session)
     return await service.get_service(service_id)
 
 
@@ -60,11 +48,9 @@ async def get_service(
 )
 async def create_service(
     service_data: ServiceCreate,
-    admin: User = Depends(require_admin),
-    service: ServiceService = Depends(
-        get_admin_service_service,
-    ),
+    session: AsyncSession = Depends(get_session),
 ):
+    service = ServiceService(session)
     return await service.create_service(service_data)
 
 
@@ -75,11 +61,9 @@ async def create_service(
 async def update_service(
     service_id: UUID,
     service_data: ServiceUpdate,
-    admin: User = Depends(require_admin),
-    service: ServiceService = Depends(
-        get_admin_service_service,
-    ),
+    session: AsyncSession = Depends(get_session),
 ):
+    service = ServiceService(session)
     return await service.update_service(
         service_id,
         service_data,
@@ -92,9 +76,7 @@ async def update_service(
 )
 async def delete_service(
     service_id: UUID,
-    admin: User = Depends(require_admin),
-    service: ServiceService = Depends(
-        get_admin_service_service,
-    ),
+    session: AsyncSession = Depends(get_session),
 ):
+    service = ServiceService(session)
     await service.delete_service(service_id)
