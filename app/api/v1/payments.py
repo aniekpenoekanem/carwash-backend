@@ -42,4 +42,34 @@ async def verify_payment(
     return await service.verify_payment(
         reference,
     )
+
+@router.post("/webhook")
+async def paystack_webhook(
+    request: Request,
+    service: PaymentService = Depends(
+        get_payment_service,
+    ),
+):
+    signature = request.headers.get("x-paystack-signature")
+
+    if signature is None:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Missing Paystack signature.",
+        )
+
+    payload = await request.body()
+
+    if not service.verify_webhook_signature(
+        payload,
+        signature,
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid Paystack signature.",
+        )
+
+    data = await request.json()
+
+    return await service.process_webhook(data)
     
