@@ -60,7 +60,17 @@ class BookingRepository:
         booking_id: UUID,
     ) -> Booking | None:
         result = await self.session.execute(
-            select(Booking).where(
+            select(Booking)
+            .options(
+                selectinload(Booking.vehicle).selectinload(
+                    Vehicle.brand,
+                ),
+                selectinload(Booking.vehicle).selectinload(
+                    Vehicle.car_model,
+                ),
+                selectinload(Booking.service),
+            )
+            .where(
                 Booking.id == booking_id,
             )
         )

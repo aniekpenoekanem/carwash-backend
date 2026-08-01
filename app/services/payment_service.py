@@ -100,11 +100,50 @@ class PaymentService:
         )
 
         if existing_payment is not None:
-            raise HTTPException(
-                status_code=status.HTTP_409_CONFLICT,
-                detail="Payment has already been initialized for this booking.",
+
+            if existing_payment.status == PaymentStatus.PAID:
+                raise HTTPException(
+                    status_code=status.HTTP_409_CONFLICT,
+                    detail="Booking has already been paid.",
+                )
+
+            amount_in_kobo = int(
+                booking.price_at_booking * 100,
             )
 
+            payment_data = await self.paystack_client.initialize_transaction(
+                email=customer_email,
+                amount=amount_in_kobo,
+                reference=existing_payment.reference,
+                metadata={
+                    "booking_id": str(booking.id),
+                },
+            )
+
+            await self.payment_repository.update(
+                existing_payment,
+                PaymentUpdate(
+                    authorization_url=payment_data[
+                        "authorization_url"
+                    ],
+                    access_code=payment_data[
+                        "access_code"
+                    ],
+                ),
+            )
+
+            return {
+                "authorization_url": payment_data[
+                    "authorization_url"
+                ],
+                "access_code": payment_data[
+                    "access_code"
+                ],
+                "reference": payment_data[
+                    "reference"
+                ],
+            }
+        
         reference = self.generate_reference()
 
         amount_in_kobo = int(

@@ -7,6 +7,7 @@ from app.schemas.booking_history import BookingHistoryResponse
 from app.dependencies.auth import require_customer
 from app.dependencies.booking import get_booking_service
 from app.models.user import User
+from app.schemas.booking_history import BookingHistoryResponse
 from app.schemas.booking import (
     BookingCreate,
     BookingResponse,
@@ -62,7 +63,7 @@ async def get_booking_history(
 
 @router.get(
     "/{booking_id}",
-    response_model=BookingResponse,
+    response_model=BookingHistoryResponse,
 )
 async def get_booking(
     booking_id: UUID,

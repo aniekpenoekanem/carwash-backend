@@ -73,3 +73,12 @@ class Vehicle(Base, TimestampMixin):
     bookings: Mapped[list["Booking"]] = relationship(
         back_populates="vehicle",
     )
+    
+    @property
+    def brand_name(self) -> str:
+        return self.brand.name
+
+
+    @property
+    def model_name(self) -> str:
+        return self.car_model.name
