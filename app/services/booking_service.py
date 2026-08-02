@@ -251,53 +251,61 @@ class BookingService:
                 detail="You do not have permission to update this booking.",
             )
 
-        booking_date = (
-            booking_data.scheduled_date
-            if booking_data.scheduled_date is not None
-            else booking.scheduled_date
-        )
-
-        booking_time = (
-            booking_data.scheduled_time
-            if booking_data.scheduled_time is not None
-            else booking.scheduled_time
-        )
-
-        if booking_date < date.today():
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Booking date cannot be in the past.",
-            )
-
-        if booking_date.weekday() not in WORKING_DAYS:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Bookings are not available on this day.",
-            )
-
+        # Only validate scheduling if the customer is changing
+        # the booking date or time.
         if (
-            booking_time < OPENING_TIME
-            or booking_time >= CLOSING_TIME
+            booking_data.scheduled_date is not None
+            or booking_data.scheduled_time is not None
         ):
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Bookings are allowed only between 08:00 and 17:00.",
+
+            booking_date = (
+                booking_data.scheduled_date
+                if booking_data.scheduled_date is not None
+                else booking.scheduled_date
             )
 
-        existing_booking = await self.booking_repository.get_by_slot(
-            booking_date,
-            booking_time,
-        )
-
-        if (
-            existing_booking is not None
-            and existing_booking.id != booking.id
-        ):
-            raise HTTPException(
-                status_code=status.HTTP_409_CONFLICT,
-                detail="The selected time slot is already booked.",
+            booking_time = (
+                booking_data.scheduled_time
+                if booking_data.scheduled_time is not None
+                else booking.scheduled_time
             )
 
+            if booking_date < date.today():
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Booking date cannot be in the past.",
+                )
+
+            if booking_date.weekday() not in WORKING_DAYS:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Bookings are not available on this day.",
+                )
+
+            if (
+                booking_time < OPENING_TIME
+                or booking_time >= CLOSING_TIME
+            ):
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Bookings are allowed only between 08:00 and 17:00.",
+                )
+
+            existing_booking = await self.booking_repository.get_by_slot(
+                booking_date,
+                booking_time,
+            )
+
+            if (
+                existing_booking is not None
+                and existing_booking.id != booking.id
+            ):
+                raise HTTPException(
+                    status_code=status.HTTP_409_CONFLICT,
+                    detail="The selected time slot is already booked.",
+                )
+                
+         # Validate booking status transition.
         if booking_data.status is not None:
             allowed_statuses = ALLOWED_STATUS_TRANSITIONS[
                 booking.status
@@ -313,6 +321,7 @@ class BookingService:
                     ),
                 )
 
+        # Validate payment status transition.
         if booking_data.payment_status is not None:
             allowed_payments = ALLOWED_PAYMENT_TRANSITIONS[
                 booking.payment_status
