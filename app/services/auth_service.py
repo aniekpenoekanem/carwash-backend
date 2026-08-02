@@ -1,7 +1,8 @@
 from __future__ import annotations
 
 from sqlalchemy.ext.asyncio import AsyncSession
-
+from uuid import UUID
+from fastapi import HTTPException, status
 from app.core.enums import UserRole
 from app.core.exceptions import (
     InactiveUserError,
@@ -22,6 +23,8 @@ from app.schemas.auth import (
     RegisterRequest,
     TokenResponse,
     UserResponse,
+    UpdateProfileRequest,
+    ChangePasswordRequest,
 )
 
 
@@ -136,3 +139,72 @@ class AuthService:
             access_token=token,
             user=UserResponse.model_validate(user),
         )
+        
+    async def update_profile(
+        self,
+        customer_id,
+        payload: UpdateProfileRequest,
+    ) -> UserResponse:
+
+        customer = await self.customer_repo.get_by_id(
+            customer_id,
+        )
+
+        if customer is None:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Customer not found.",
+            )
+
+        user = await self.user_repo.get_by_id(
+            customer.user_id,
+        )
+
+        if user is None:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="User not found.",
+            )
+
+        customer.first_name = payload.first_name
+        customer.last_name = payload.last_name
+        customer.phone = payload.phone_number
+
+        user.first_name = payload.first_name
+        user.last_name = payload.last_name
+        user.phone_number = payload.phone_number
+
+        await self.customer_repo.update(customer)
+        await self.user_repo.update(user)
+        
+        await self.db.commit()
+
+        return UserResponse.model_validate(user)
+    
+    async def change_password(
+        self,
+        user_id: UUID,
+        payload: ChangePasswordRequest,
+    ) -> None:
+        user = await self.user_repo.get_by_id(user_id)
+
+        if user is None:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="User not found.",
+            )
+
+        if not verify_password(
+            payload.current_password,
+            user.password_hash,
+        ):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Current password is incorrect.",
+            )
+
+        user.password_hash = hash_password(payload.new_password)
+
+        await self.user_repo.update(user)
+        
+        await self.db.commit()

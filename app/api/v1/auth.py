@@ -10,6 +10,8 @@ from app.schemas.auth import (
     LoginRequest,
     RegisterRequest,
     TokenResponse,
+    UpdateProfileRequest,
+    ChangePasswordRequest,
     UserResponse,
 )
 from app.services.auth_service import AuthService
@@ -53,5 +55,39 @@ async def me(
     current_user: User = Depends(get_current_user),
 ) -> UserResponse:
     return UserResponse.model_validate(current_user)
+
+
+@router.put(
+    "/me",
+    response_model=UserResponse,
+)
+async def update_me(
+    payload: UpdateProfileRequest,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_session),
+) -> UserResponse:
+    service = AuthService(db)
+
+    return await service.update_profile(
+        customer_id=current_user.customer.id,
+        payload=payload,
+    )
+    
+@router.put("/change-password")
+async def change_password(
+    payload: ChangePasswordRequest,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_session),
+):
+    service = AuthService(db)
+
+    await service.change_password(
+        user_id=current_user.id,
+        payload=payload,
+    )
+
+    return {
+        "message": "Password updated successfully."
+    }
 
 

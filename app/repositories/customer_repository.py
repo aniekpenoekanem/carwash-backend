@@ -27,3 +27,15 @@ class CustomerRepository:
         await self.db.flush()
         await self.db.refresh(customer)
         return customer
+    
+    async def update(
+        self,
+        customer: Customer,
+    ) -> Customer:
+        self.db.add(customer)
+
+        await self.db.flush()
+
+        await self.db.refresh(customer)
+
+        return customer
